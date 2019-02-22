@@ -11,11 +11,10 @@ cache: cargo
 
 script:
   - |
-    cargo test --verbose &&
-    cargo test --verbose --features serde
+    cargo test --verbose
 
 before_deploy:
-  - cargo doc --no-deps --all-features
+  - cargo doc --no-deps
 
 deploy:
   provider: pages
