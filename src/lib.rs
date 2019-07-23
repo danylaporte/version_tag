@@ -1,44 +1,43 @@
 //! A VersionTag struct for Rust to detect changes
-//! 
+//!
 //! # Example
 //! Suppose you want to do a heavy computation based on something else.
-//! 
+//!
 //! You might want to cache the heavy computation result and perform it again
 //! only when a dependency changes.
-//! 
+//!
 //! ```
 //! use version_tag::{combine, VersionTag};
-//! 
+//!
 //! /// A dependency
 //! struct Dep {
 //!     v: u32,
 //!     tag: VersionTag,
 //! }
-//! 
+//!
 //! struct MyStruct {
 //!     v: u32,
 //!     tag: VersionTag,
 //! }
-//! 
+//!
 //! impl MyStruct {
 //!     fn update_if_necessary(&mut self, x: &Dep, y: &Dep) {
-//! 
+//!
 //!         // compute the actual tag
 //!         let actual = combine(&[x.tag, y.tag]);
-//! 
+//!
 //!         // if the tag has changed, we need to recalculate
 //!         if actual != self.tag {
-//! 
+//!
 //!             // perform the heavy computation
 //!             self.v = x.v + y.v;
-//! 
+//!
 //!             // update the tag
 //!             self.tag = actual;
 //!         }
 //!     }
 //! }
 //! ```
-use std::hash::Hasher;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 static COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -65,7 +64,7 @@ impl Default for VersionTag {
     }
 }
 
-/// compute a new VersionTag by hashing all other tags together
+/// compute a new VersionTag by using the max value of other tags
 ///
 /// # Example
 /// ```
@@ -77,21 +76,17 @@ impl Default for VersionTag {
 /// let t3 = combine(&[t1, t2]);
 ///
 /// assert!(t1 != t3);
-/// assert!(t2 != t3);
+/// assert!(t2 == t3);
 ///
 /// assert_eq!(t3, combine(&[t1, t2]));
 ///
 /// let mut t1 = t1;
 /// t1.notify();
-///
-/// assert!(t3 != combine(&[t1, t2]));
+/// 
+/// let t4 = combine(&[t1, t2]);
+/// assert!(t3 != t4);
+/// assert!(t4 == t1);
 /// ```
 pub fn combine(tags: &[VersionTag]) -> VersionTag {
-    let mut hasher = std::collections::hash_map::DefaultHasher::default();
-
-    for tag in tags {
-        hasher.write_u64(tag.0);
-    }
-
-    VersionTag(hasher.finish())
+    VersionTag(tags.iter().map(|t| t.0).max().unwrap_or_default())
 }
