@@ -42,7 +42,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct VersionTag(u64);
 
 impl VersionTag {
@@ -82,7 +82,7 @@ impl Default for VersionTag {
 ///
 /// let mut t1 = t1;
 /// t1.notify();
-/// 
+///
 /// let t4 = combine(&[t1, t2]);
 /// assert!(t3 != t4);
 /// assert!(t4 == t1);
