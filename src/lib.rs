@@ -40,7 +40,7 @@
 //! ```
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-static COUNTER: AtomicUsize = AtomicUsize::new(0);
+static COUNTER: AtomicUsize = AtomicUsize::new(1);
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct VersionTag(u64);
@@ -49,6 +49,21 @@ impl VersionTag {
     /// Creates an initialized new VersionTag.
     pub fn new() -> Self {
         VersionTag(COUNTER.fetch_add(1, Ordering::SeqCst) as u64)
+    }
+
+    /// Creates a version 0 which could indicate that the computation
+    /// has not been done.
+    ///
+    /// # Example
+    /// ```
+    /// use version_tag::VersionTag;
+    ///
+    /// // The zero version will always be the lowest version.
+    /// // Calling new will start at version 1
+    /// assert!(VersionTag::zero() < VersionTag::new());
+    /// ```
+    pub fn zero() -> Self {
+        VersionTag(0)
     }
 
     /// Internally increment the counter of the tag to signal a change.
