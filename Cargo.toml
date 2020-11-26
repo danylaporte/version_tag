@@ -3,5 +3,11 @@ name = "version_tag"
 version = "0.3.0"
 authors = ["Dany Laporte <dany_laporte@hotmail.com>"]
 edition = "2018"
+publish = false
+
+[features]
+default = []
+#serde = []
 
 [dependencies]
+serde = { version = "1.0", features = ["derive"], optional = true }
