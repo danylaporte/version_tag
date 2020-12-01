@@ -38,19 +38,68 @@
 //!     }
 //! }
 //! ```
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
 
 static COUNTER: AtomicUsize = AtomicUsize::new(1);
 
+/// Allow to share this tag between process reload.
+/// This tag can be serialized and deseralize.
+#[cfg(feature = "shared-tag")]
+#[derive(serde::Deserialize, serde::Serialize)]
+#[serde(transparent)]
+pub struct SharedTag(u128);
+
+#[cfg(feature = "shared-tag")]
+impl SharedTag {
+    pub fn new(tag: VersionTag) -> Self {
+        let i = Self::instance() as u128;
+        Self(i << 8 + tag.0 as u128)
+    }
+
+    fn instance() -> u64 {
+        static INSTANCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let val = INSTANCE.load(Relaxed);
+
+        if val == 0 {
+            let new = rand::random();
+            INSTANCE.compare_and_swap(0, new, Relaxed)
+        } else {
+            val
+        }
+    }
+}
+
+#[cfg(feature = "shared-tag")]
+impl Eq for SharedTag {}
+
+#[cfg(feature = "shared-tag")]
+impl From<VersionTag> for SharedTag {
+    fn from(v: VersionTag) -> Self {
+        Self::new(v)
+    }
+}
+
+#[cfg(feature = "shared-tag")]
+impl PartialEq for SharedTag {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+#[cfg(feature = "shared-tag")]
+impl PartialEq<Option<SharedTag>> for SharedTag {
+    fn eq(&self, other: &Option<SharedTag>) -> bool {
+        other.as_ref().map_or(false, |t| self == t)
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
-#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct VersionTag(u64);
 
 impl VersionTag {
     /// Creates an initialized new VersionTag.
     pub fn new() -> Self {
-        VersionTag(COUNTER.fetch_add(1, Ordering::SeqCst) as u64)
+        VersionTag(COUNTER.fetch_add(1, Relaxed) as u64)
     }
 
     /// Creates a version 0 which could indicate that the computation
@@ -70,7 +119,7 @@ impl VersionTag {
 
     /// Internally increment the counter of the tag to signal a change.
     pub fn notify(&mut self) {
-        self.0 = COUNTER.fetch_add(1, Ordering::SeqCst) as u64;
+        self.0 = COUNTER.fetch_add(1, Relaxed) as u64;
     }
 }
 
