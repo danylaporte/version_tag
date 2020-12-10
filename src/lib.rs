@@ -45,7 +45,7 @@ static COUNTER: AtomicUsize = AtomicUsize::new(1);
 /// Allow to share this tag between process reload.
 /// This tag can be serialized and deseralize.
 #[cfg(feature = "shared-tag")]
-#[derive(Clone, Copy, serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Copy, Debug, serde::Deserialize, serde::Serialize)]
 #[serde(transparent)]
 pub struct SharedTag(u128);
 
