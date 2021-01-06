@@ -52,8 +52,7 @@ pub struct SharedTag(u128);
 #[cfg(feature = "shared-tag")]
 impl SharedTag {
     pub fn new(tag: VersionTag) -> Self {
-        let i = Self::instance() as u128;
-        Self(i << 8 + tag.0 as u128)
+        Self(shared(Self::instance(), tag.0))
     }
 
     fn instance() -> u64 {
@@ -155,4 +154,15 @@ impl Default for VersionTag {
 /// ```
 pub fn combine(tags: &[VersionTag]) -> VersionTag {
     VersionTag(tags.iter().map(|t| t.0).max().unwrap_or_default())
+}
+
+#[cfg(any(test, feature = "shared-tag"))]
+fn shared(instance: u64, tag: u64) -> u128 {
+    let i = (instance as u128) << 8;
+    i + tag as u128
+}
+
+#[test]
+fn test_shared_overflow() {
+    shared(u64::MAX, u64::MAX);
 }
