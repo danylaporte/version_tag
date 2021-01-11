@@ -129,6 +129,80 @@ impl Default for VersionTag {
     }
 }
 
+#[cfg(feature = "postgres")]
+impl<'a> postgres_types::FromSql<'a> for VersionTag {
+    fn from_sql(
+        ty: &postgres_types::Type,
+        raw: &'a [u8],
+    ) -> Result<Self, Box<dyn std::error::Error + Sync + Send>> {
+        assert_eq!(ty, &postgres_types::Type::BYTEA);
+
+        if raw.len() != 8 {
+            use std::fmt;
+
+            struct Error;
+
+            impl std::error::Error for Error {}
+
+            impl fmt::Debug for Error {
+                fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+                    f.write_str("VersionTag must be 8 bytes long.")
+                }
+            }
+
+            impl fmt::Display for Error {
+                fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+                    fmt::Debug::fmt(self, f)
+                }
+            }
+
+            return Err(Box::new(Error));
+        }
+
+        let mut bytes = [0u8; 8];
+        bytes.copy_from_slice(&raw[0..8]);
+
+        Ok(VersionTag(u64::from_be_bytes(bytes)))
+    }
+
+    fn accepts(ty: &postgres_types::Type) -> bool {
+        ty == &postgres_types::Type::BYTEA
+    }
+}
+
+#[cfg(feature = "postgres")]
+impl postgres_types::ToSql for VersionTag {
+    fn to_sql(
+        &self,
+        ty: &postgres_types::Type,
+        out: &mut postgres_types::private::BytesMut,
+    ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>>
+    where
+        Self: Sized,
+    {
+        assert_eq!(ty, &postgres_types::Type::BYTEA);
+        out.extend_from_slice(&self.0.to_be_bytes());
+        Ok(postgres_types::IsNull::No)
+    }
+
+    fn accepts(ty: &postgres_types::Type) -> bool
+    where
+        Self: Sized,
+    {
+        ty == &postgres_types::Type::BYTEA
+    }
+
+    fn to_sql_checked(
+        &self,
+        ty: &postgres_types::Type,
+        out: &mut postgres_types::private::BytesMut,
+    ) -> Result<postgres_types::IsNull, Box<dyn std::error::Error + Sync + Send>> {
+        assert_eq!(ty, &postgres_types::Type::BYTEA);
+        out.extend_from_slice(&self.0.to_be_bytes());
+        Ok(postgres_types::IsNull::No)
+    }
+}
+
 /// compute a new VersionTag by using the max value of other tags
 ///
 /// # Example
