@@ -131,7 +131,7 @@ impl Default for VersionTag {
 
 impl From<VersionTag> for u64 {
     fn from(t: VersionTag) -> Self {
-        self.0
+        t.0
     }
 }
 
