@@ -52,16 +52,16 @@ pub struct SharedTag(u128);
 #[cfg(feature = "shared-tag")]
 impl SharedTag {
     pub fn new(tag: VersionTag) -> Self {
-        Self(shared(Self::instance(), tag.0))
+        Self(shared(Self::global(), tag.0))
     }
 
-    fn instance() -> u64 {
-        static INSTANCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-        let val = INSTANCE.load(Relaxed);
+    pub fn global() -> u64 {
+        static GLOBAL: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let val = GLOBAL.load(Relaxed);
 
         if val == 0 {
             let new = rand::random();
-            INSTANCE.compare_and_swap(0, new, Relaxed)
+            GLOBAL.compare_and_swap(0, new, Relaxed)
         } else {
             val
         }
