@@ -45,7 +45,9 @@ static COUNTER: AtomicUsize = AtomicUsize::new(1);
 /// Allow to share this tag between process reload.
 /// This tag can be serialized and deseralize.
 #[cfg(feature = "shared-tag")]
-#[derive(Clone, Copy, Debug, serde::Deserialize, serde::Serialize)]
+#[derive(
+    Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, serde::Deserialize, serde::Serialize,
+)]
 #[serde(transparent)]
 pub struct SharedTag(u128);
 
@@ -69,19 +71,9 @@ impl SharedTag {
 }
 
 #[cfg(feature = "shared-tag")]
-impl Eq for SharedTag {}
-
-#[cfg(feature = "shared-tag")]
 impl From<VersionTag> for SharedTag {
     fn from(v: VersionTag) -> Self {
         Self::new(v)
-    }
-}
-
-#[cfg(feature = "shared-tag")]
-impl PartialEq for SharedTag {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
     }
 }
 
@@ -92,7 +84,7 @@ impl PartialEq<Option<SharedTag>> for SharedTag {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct VersionTag(u64);
 
 impl VersionTag {
