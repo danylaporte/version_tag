@@ -45,16 +45,24 @@ static COUNTER: AtomicUsize = AtomicUsize::new(1);
 /// Allow to share this tag between process reload.
 /// This tag can be serialized and deseralize.
 #[cfg(feature = "shared-tag")]
+#[serde_with::serde_as]
 #[derive(
     Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, serde::Deserialize, serde::Serialize,
 )]
 #[serde(transparent)]
-pub struct SharedTag(u128);
+pub struct SharedTag {
+    #[serde_as(
+        as = "serde_with::base64::Base64<serde_with::base64::UrlSafe, serde_with::formats::Unpadded>"
+    )]
+    tag: [u8; 16],
+}
 
 #[cfg(feature = "shared-tag")]
 impl SharedTag {
     pub fn new(tag: VersionTag) -> Self {
-        Self(shared(Self::global(), tag.0))
+        Self {
+            tag: shared(Self::global(), tag.0),
+        }
     }
 
     pub fn global() -> u64 {
@@ -63,7 +71,11 @@ impl SharedTag {
 
         if val == 0 {
             let new = rand::random();
-            GLOBAL.compare_and_swap(0, new, Relaxed)
+
+            match GLOBAL.compare_exchange_weak(0, new, Relaxed, Relaxed) {
+                Ok(_) => new,
+                Err(v) => v,
+            }
         } else {
             val
         }
@@ -154,13 +166,28 @@ pub fn combine(tags: &[VersionTag]) -> VersionTag {
     VersionTag(tags.iter().map(|t| t.0).max().unwrap_or_default())
 }
 
-#[cfg(any(test, feature = "shared-tag"))]
-fn shared(instance: u64, tag: u64) -> u128 {
-    let i = (instance as u128) << 8;
-    i + tag as u128
+#[cfg(feature = "shared-tag")]
+fn shared(instance: u64, tag: u64) -> [u8; 16] {
+    let i = (instance as u128) << 64;
+    let v = i + tag as u128;
+    v.to_be_bytes()
 }
 
+#[cfg(feature = "shared-tag")]
 #[test]
-fn test_shared_overflow() {
+fn shared_doesnt_overflow() {
     shared(u64::MAX, u64::MAX);
+}
+
+#[cfg(feature = "shared-tag")]
+#[test]
+fn shared_tag_deserialize() {
+    let t = SharedTag::new(VersionTag(3));
+    let s = serde_json::to_string(&t).unwrap();
+
+    println!("{s}");
+
+    let u = serde_json::from_str::<SharedTag>(&s).unwrap();
+
+    assert_eq!(t, u);
 }
